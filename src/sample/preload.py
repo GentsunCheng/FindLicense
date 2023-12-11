@@ -2,6 +2,7 @@ import cv2
 import threading
 import time
 import os
+import numpy as np
 
 
 class PreCam(object):
@@ -17,7 +18,6 @@ class PreCam(object):
         self.lock = threading.Lock()
         self.cam_thread = threading.Thread(target=self.camera)
         self.proc_thread = threading.Thread(target=self.im_process)
-        pass
 
     def camera(self):
         cap = cv2.VideoCapture(self.cap_id)
@@ -30,6 +30,24 @@ class PreCam(object):
         while not self.stop_flag:
             time.sleep(0.05)
             with self.lock:
+                # 转换图像到HSV颜色空间
+                hsv = cv2.cvtColor(self.pre_im, cv2.COLOR_BGR2HSV)
+                hsv = cv2.addWeighted(hsv, 1.0, hsv, 0, 5)
+
+                # 定义颜色范围
+                lower_blue = np.array([100, 50, 50])
+                upper_blue = np.array([130, 255, 255])
+                lower_green = np.array([40, 40, 40])
+                upper_green = np.array([80, 255, 255])
+                lower_yellow = np.array([20, 100, 100])
+                upper_yellow = np.array([30, 255, 255])
+
+                # 创建掩模以选择特定颜色范围
+                mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
+                mask_green = cv2.inRange(hsv, lower_green, upper_green)
+                mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+                # 合并掩模
+                self.proc_im = cv2.bitwise_or(mask_blue, cv2.bitwise_or(mask_green, mask_yellow))
                 self.proc_im = self.pre_im.copy()
                 self.proc_im = cv2.cvtColor(self.proc_im, cv2.COLOR_BGR2GRAY)
                 ret, self.proc_im = cv2.threshold(self.proc_im, 127, 255, cv2.THRESH_BINARY)
