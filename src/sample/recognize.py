@@ -22,10 +22,10 @@ class FindLicense(object):
     def identify(self):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
         self.im_plate = cv2.dilate(self.im_plate, kernel)
-        self.im_plate = cv2.cvtColor(self.im_plate, cv2.COLOR_BGR2HSV)
-        self.im_plate = cv2.addWeighted(self.im_plate, 0.5, self.im_plate, 0, 50)
+        self.im_plate = cv2.GaussianBlur(self.im_plate, (5, 5), 0)
+        self.im_plate = cv2.addWeighted(self.im_plate, 0.75, self.im_plate, 0, 50)
         self.im_plate = cv2.cvtColor(self.im_plate, cv2.COLOR_BGR2GRAY)
-        ret, self.im_plate = cv2.threshold(self.im_plate, 110, 255, cv2.THRESH_BINARY)
+        ret, self.im_plate = cv2.threshold(self.im_plate, 150, 255, cv2.THRESH_BINARY)
         cv2.imshow("plate", self.im_plate)
 
     def get_plate(self, pre_im=None, proc_im=None, debug=False):
