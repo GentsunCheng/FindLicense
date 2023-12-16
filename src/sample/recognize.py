@@ -2,6 +2,7 @@ import os
 import time
 import cv2
 import numpy as np
+import hyperlpr3 as lpr3
 
 class FindLicense(object):
     def __init__(self):
@@ -12,21 +13,24 @@ class FindLicense(object):
         self.proc_im = cv2.cvtColor(self.proc_im, cv2.COLOR_BGR2GRAY)
         ret, self.proc_im = cv2.threshold(self.proc_im, 127, 255, cv2.THRESH_BINARY)
         self.im_plate = self.pre_im
-        self.template = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-                         'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U',
-                         'V', 'W', 'X', 'Y', 'Z',
-                         '藏', '川', '鄂', '甘', '赣', '贵', '桂', '黑', '沪', '吉', '冀', '津', '晋', '京', '辽', '鲁',
-                         '蒙', '闽', '宁',
-                         '青', '琼', '陕', '苏', '皖', '湘', '新', '渝', '豫', '粤', '云', '浙']
+        self.catcher = lpr3.LicensePlateCatcher()
 
     def identify(self):
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
         self.im_plate = cv2.dilate(self.im_plate, kernel)
         self.im_plate = cv2.GaussianBlur(self.im_plate, (5, 5), 0)
         self.im_plate = cv2.addWeighted(self.im_plate, 0.75, self.im_plate, 0, 50)
-        self.im_plate = cv2.cvtColor(self.im_plate, cv2.COLOR_BGR2GRAY)
-        ret, self.im_plate = cv2.threshold(self.im_plate, 150, 255, cv2.THRESH_BINARY)
-        cv2.imshow("plate", self.im_plate)
+        # 计算矩形边框宽度为图像高度的 10%
+        border_thickness = int(0.25 * self.im_plate.shape[0])
+        # 创建一个和 self.im_plate 大小相同的全白图像
+        overlay = np.ones_like(self.im_plate) * 255
+        # 在全白图像上绘制矩形边框，宽度为计算得到的值
+        cv2.rectangle(overlay, (0, 0), (overlay.shape[1], overlay.shape[0]), (0, 0, 0), thickness=border_thickness)
+        num_list = self.catcher(self.im_plate)
+        if num_list and len(num_list) > 0:
+            self.plate_num = num_list[0][0]
+        else:
+            self.plate_num = ""
 
     def get_plate(self, pre_im=None, proc_im=None, debug=False):
         time.sleep(0.05)

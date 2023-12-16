@@ -35,37 +35,29 @@ class PreCam(object):
                 hsv = cv2.addWeighted(hsv, 1.0, hsv, 0, 5)
 
                 # 定义颜色范围
-                lower_blue = np.array([100, 50, 50])
-                upper_blue = np.array([130, 255, 255])
-                lower_green = np.array([40, 40, 40])
-                upper_green = np.array([80, 255, 255])
-                lower_yellow = np.array([20, 100, 100])
-                upper_yellow = np.array([30, 255, 255])
-
+                lower_blue = np.array([110, 50, 50])
+                upper_blue = np.array([120, 255, 255])
+                lower_green = np.array([50, 50, 50])
+                upper_green = np.array([70, 255, 255])
+                lower_yellow = np.array([25, 100, 100])
+                upper_yellow = np.array([28, 255, 255])
                 # 创建掩模以选择特定颜色范围
                 mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
                 mask_green = cv2.inRange(hsv, lower_green, upper_green)
                 mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
                 # 合并掩模
                 self.proc_im = cv2.bitwise_or(mask_blue, cv2.bitwise_or(mask_green, mask_yellow))
-                self.proc_im = self.pre_im.copy()
-                self.proc_im = cv2.cvtColor(self.proc_im, cv2.COLOR_BGR2GRAY)
-                ret, self.proc_im = cv2.threshold(self.proc_im, 127, 255, cv2.THRESH_BINARY)
-                # 腐蚀（erode）和膨胀（dilate）
-                kernelX = cv2.getStructuringElement(cv2.MORPH_RECT, (50, 1))
-                kernelY = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 20))
-                # x方向进行闭操作（抑制暗细节）
-                self.proc_im = cv2.dilate(self.proc_im, kernelX)
-                self.proc_im = cv2.erode(self.proc_im, kernelX)
-                # y方向的开操作
-                self.proc_im = cv2.erode(self.proc_im, kernelY)
-                self.proc_im = cv2.dilate(self.proc_im, kernelY)
-                # 中值滤波
-                self.proc_im = cv2.medianBlur(self.proc_im, 5)
-                # 高斯滤波
-                self.proc_im = cv2.GaussianBlur(self.proc_im, (5, 5), 0)
-                # 双边滤波
-                self.proc_im = cv2.bilateralFilter(self.proc_im, 9, 75, 75)
+                # 取反掩模，将蓝色、绿色和黄色以外的地方填充为白色
+                self.proc_im = cv2.bitwise_not(self.proc_im)
+
+                kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+                self.proc_im = cv2.morphologyEx(self.proc_im, cv2.MORPH_OPEN, kernel)
+                self.proc_im = cv2.morphologyEx(self.proc_im, cv2.MORPH_CLOSE, kernel)
+                contours, _ = cv2.findContours(self.proc_im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                for contour in contours:
+                    x, y, w, h = cv2.boundingRect(contour)
+                    cv2.rectangle(self.proc_im, (x, y), (x + w, y + h), (255, 255, 255), thickness=cv2.FILLED)
+                self.proc_im = cv2.bitwise_and(self.pre_im, self.pre_im, mask=self.proc_im)
 
     def start(self, debug=False, cap_id=0):
         self.cap_id = cap_id

@@ -15,3 +15,6 @@ build/
 venv/
 env/
 ENV/
+
+source/templates/
+source/图像处理大作业/
