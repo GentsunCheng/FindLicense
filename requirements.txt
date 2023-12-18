@@ -1,7 +1,3 @@
-argcomplete==2.1.1
-click==8.1.7
-colorama==0.4.6
-darkdetect==0.8.0
 numpy==1.26.2
 opencv-contrib-python==4.8.1.78
 PyQt6==6.4.2
