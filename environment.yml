@@ -1,0 +1,5 @@
+name: FindLicense
+channels:
+  - defaults
+dependencies:
+  - python=3.11
