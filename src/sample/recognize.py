@@ -20,7 +20,6 @@ class FindLicense(object):
         self.proc_im = proc_im if proc_im is  not None else self.proc_im
 
         plate_im = cv2.bitwise_and(self.pre_im, self.proc_im)
-        cv2.imshow("pre_im", plate_im)
         num_list = self.catcher(plate_im)
         if num_list and len(num_list) > 0:
             self.plate_num = num_list[0][0]
