@@ -30,34 +30,37 @@ class PreCam(object):
         while not self.stop_flag:
             time.sleep(0.05)
             with self.lock:
-                # 转换图像到HSV颜色空间
+                # 将图像转换为HSV颜色空间
                 hsv = cv2.cvtColor(self.pre_im, cv2.COLOR_BGR2HSV)
-                hsv = cv2.addWeighted(hsv, 1.0, hsv, 0, 5)
 
                 # 定义颜色范围
-                lower_blue = np.array([110, 50, 50])
-                upper_blue = np.array([120, 255, 255])
+                lower_blue = np.array([100, 50, 50])
+                upper_blue = np.array([140, 255, 255])
                 lower_green = np.array([50, 50, 50])
                 upper_green = np.array([70, 255, 255])
-                lower_yellow = np.array([25, 100, 100])
-                upper_yellow = np.array([28, 255, 255])
+                lower_yellow = np.array([20, 100, 100])
+                upper_yellow = np.array([30, 255, 255])
+
                 # 创建掩模以选择特定颜色范围
                 mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
                 mask_green = cv2.inRange(hsv, lower_green, upper_green)
                 mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+
                 # 合并掩模
-                self.proc_im = cv2.bitwise_or(mask_blue, cv2.bitwise_or(mask_green, mask_yellow))
-                # 取反掩模，将蓝色、绿色和黄色以外的地方填充为白色
-                self.proc_im = cv2.bitwise_not(self.proc_im)
+                combined_mask = cv2.bitwise_or(mask_blue, cv2.bitwise_or(mask_green, mask_yellow))
+
+                # 保留选定区域，其他区域填充为白色
+                self.proc_im = cv2.bitwise_and(self.pre_im, self.pre_im, mask=combined_mask)
 
                 kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
                 self.proc_im = cv2.morphologyEx(self.proc_im, cv2.MORPH_OPEN, kernel)
                 self.proc_im = cv2.morphologyEx(self.proc_im, cv2.MORPH_CLOSE, kernel)
-                contours, _ = cv2.findContours(self.proc_im, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+                # 寻找轮廓并填充
+                contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
                 for contour in contours:
                     x, y, w, h = cv2.boundingRect(contour)
                     cv2.rectangle(self.proc_im, (x, y), (x + w, y + h), (255, 255, 255), thickness=cv2.FILLED)
-                self.proc_im = cv2.bitwise_and(self.pre_im, self.pre_im, mask=self.proc_im)
 
     def start(self, debug=False, cap_id=0):
         self.cap_id = cap_id

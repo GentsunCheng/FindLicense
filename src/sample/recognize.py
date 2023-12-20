@@ -12,62 +12,21 @@ class FindLicense(object):
         self.proc_im = self.pre_im
         self.proc_im = cv2.cvtColor(self.proc_im, cv2.COLOR_BGR2GRAY)
         ret, self.proc_im = cv2.threshold(self.proc_im, 127, 255, cv2.THRESH_BINARY)
-        self.im_plate = self.pre_im
         self.catcher = lpr3.LicensePlateCatcher()
 
-    def identify(self):
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-        self.im_plate = cv2.dilate(self.im_plate, kernel)
-        self.im_plate = cv2.GaussianBlur(self.im_plate, (5, 5), 0)
-        self.im_plate = cv2.addWeighted(self.im_plate, 0.75, self.im_plate, 0, 50)
-        # 计算矩形边框宽度为图像高度的 10%
-        border_thickness = int(0.25 * self.im_plate.shape[0])
-        # 创建一个和 self.im_plate 大小相同的全白图像
-        overlay = np.ones_like(self.im_plate) * 255
-        # 在全白图像上绘制矩形边框，宽度为计算得到的值
-        cv2.rectangle(overlay, (0, 0), (overlay.shape[1], overlay.shape[0]), (0, 0, 0), thickness=border_thickness)
-        num_list = self.catcher(self.im_plate)
+    def get_plate(self, pre_im=None, proc_im=None, debug=False):
+        time.sleep(0.05)
+        self.pre_im = pre_im if pre_im is not None else self.pre_im
+        self.proc_im = proc_im if proc_im is  not None else self.proc_im
+
+        plate_im = cv2.bitwise_and(self.pre_im, self.proc_im)
+        cv2.imshow("pre_im", plate_im)
+        num_list = self.catcher(plate_im)
         if num_list and len(num_list) > 0:
             self.plate_num = num_list[0][0]
         else:
             self.plate_num = ""
 
-    def get_plate(self, pre_im=None, proc_im=None, debug=False):
-        time.sleep(0.05)
-        pre_im = self.pre_im if pre_im is None else pre_im
-        proc_im = self.proc_im if proc_im is None else proc_im
-
-        # 进行边缘检测
-        edges = cv2.Canny(proc_im, 50, 150)
-        # 进行轮廓检测
-        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # 找到可能的车牌区域
-        possible_plates = []
-        for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            aspect_ratio = w / h
-            if 2 < aspect_ratio < 5:
-                possible_plates.append((x, y, w, h))
-
-        # 选择最大的区域
-        max_plate = max(possible_plates, key=lambda x: x[2] * x[3], default=None)
-
-        # 在pre_im上切割出车牌区域
-        if max_plate is not None:
-            x, y, w, h = max_plate
-            cv2.rectangle(pre_im, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            self.im_plate = pre_im[y:y + h, x:x + w]
-            # 识别车牌
-            self.identify()
-        else:
-            self.plate_num = ''
-
-        # 在原图上绘制车牌区域
-            if debug:
-                cv2.rectangle(proc_im, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            else:
-                cv2.rectangle(pre_im, (x, y), (x + w, y + h), (0, 255, 0), 2)
         if debug:
             return proc_im, self.plate_num
         else:
